@@ -17,29 +17,32 @@ RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selectio
 # Install required packages
 RUN apt-get update && \
     apt-get install -y \
-    ant=1.10.5-3~18.04 \
-    autoconf=2.69-11 \
-    cmake=3.10.2-1ubuntu2 \
-    cython=0.26.1-0.4 \
-    g++=4:7.4.0-1ubuntu2.2 \
-    gfortran=4:7.4.0-1ubuntu2.2 \
+    sudo \
+    less \
+    emacs \
+    ant \
+    autoconf \
+    cmake \
+    cython \
+    g++ \
+    gfortran \
     libgfortran3 \
-    ipython=5.5.0-1 \
-    libboost-dev=1.65.1.0ubuntu1 \
-    openjdk-8-jdk=8u212-b03-0ubuntu1.18.04.1 \
-    pkg-config=0.29.1-0ubuntu2 \
-    python-dev=2.7.15~rc1-1 \
-    python-jpype=0.6.2+dfsg-2 \
+    ipython \
+    libboost-dev \
+    openjdk-8-jdk \
+    pkg-config \
+    python-dev \
+    python-jpype \
     python-lxml \
     python-matplotlib \
     python-nose \
-    python-numpy=1:1.13.3-2ubuntu1 \
-    python-pip=9.0.1-2.3~ubuntu1 \
-    python-scipy=0.19.1-2ubuntu1 \
-    subversion=1.9.7-4ubuntu1 \
-    swig=3.0.12-1 \
-    wget=1.19.4-1ubuntu2.2 \
-    zlib1g-dev=1:1.2.11.dfsg-0ubuntu2 && \
+    python-numpy \
+    python-pip \
+    python-scipy \
+    subversion \
+    swig \
+    wget \
+    zlib1g-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # Install jcc-3.0 to avoid error in python -c "import jcc"
@@ -88,8 +91,20 @@ RUN export uid=1000 gid=1000 && \
     chmod 0440 /etc/sudoers.d/developer && \
     chown ${uid}:${gid} -R /home/developer
 
+# ============ Expose ports ============================================================
+EXPOSE 8888
+
+# ============ Install IPython/Jupyter notebook ========================================
+RUN apt-get install -y ipython
+RUN pip install jupyter
+
+# ============ Set Jupyter password ====================================================
+RUN mkdir -p /home/developer/.jupyter && jupyter notebook --generate-config
+RUN python -c 'import json; from notebook.auth import passwd; open("/home/developer/.jupyter/jupyter_notebook_config.json", "w").write(json.dumps({"NotebookApp":{"password": passwd("password")}}));'
+
 USER developer
 ENV HOME /home/developer
+RUN mkdir /home/developer/ipynotebooks
 
 # Avoid warning that Matplotlib is building the font cache using fc-list. This may take a moment.
 # This needs to be towards the end of the script as the command writes data to

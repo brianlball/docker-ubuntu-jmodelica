@@ -1,5 +1,4 @@
-IMG_NAME=ubuntu-1804_jmodelica_trunk
-DOCKER_USERNAME=michaelwetter
+IMG_NAME=jmodelica
 
 COMMAND_RUN=docker run \
 	  --name jmodelica \
@@ -8,8 +7,7 @@ COMMAND_RUN=docker run \
 	  -v /tmp/.X11-unix:/tmp/.X11-unix \
 	  --rm \
 	  -v `pwd`/shared:/mnt/shared \
-	  ${DOCKER_USERNAME}/${IMG_NAME} /bin/bash -c
-
+	  ${IMG_NAME} /bin/bash -c
 
 COMMAND_START=docker run \
 	  --name jmodelica \
@@ -17,19 +15,41 @@ COMMAND_START=docker run \
 	  --rm \
 	  --interactive \
 	  -t \
+	  --env="DISPLAY" \
+	  --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" \
 	  -v `pwd`/shared:/mnt/shared \
-	  ${DOCKER_USERNAME}/${IMG_NAME} \
+	  ${IMG_NAME} \
 	  /bin/bash -c -i
+    
+COMMAND_START_windows=docker run \
+	  --name jmodelica \
+	  --detach=false \
+	  --rm \
+	  --interactive \
+	  -t \
+	  --env="DISPLAY" \
+	  --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" \
+ 	  -v /shared:/mnt/shared \
+	  ${IMG_NAME} \
+	  /bin/bash -c -i
+
+start-jupyter:
+	docker run -d -v $(shell pwd)/modelica:/home/developer/modelica \
+    --env="DISPLAY" \
+    --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" \
+	  -v $(shell pwd)/ipynotebooks:/home/developer/ipynotebooks \
+	  -p 127.0.0.1:8888:8888 ${IMG_NAME} \
+	  sh -c 'jupyter notebook --no-browser --ip=0.0.0.0 --port=8888 --notebook-dir=/home/developer/ipynotebooks'
 
 print_latest_versions_from_svn:
 	svn log -l 1 https://svn.jmodelica.org/trunk
 	svn log -l 1 https://svn.jmodelica.org/assimulo/trunk
 
 build:
-	docker build --no-cache --rm -t ${DOCKER_USERNAME}/${IMG_NAME} .
+	docker build --no-cache --rm -t ${IMG_NAME} .
 
 push:
-	docker push ${DOCKER_USERNAME}/${IMG_NAME}
+	docker push ${IMG_NAME}
 
 verify-image:
 	$(eval TMPDIR := $(shell mktemp -d -t ubuntu-jmodelica-verification-XXXX))
@@ -41,7 +61,7 @@ verify-image:
 	rm -rf ${TMPDIR}
 
 remove-image:
-	docker rmi ${DOCKER_USERNAME}/${IMG_NAME}
+	docker rmi ${IMG_NAME}
 
 start_bash:
 	$(COMMAND_START) \
@@ -51,8 +71,14 @@ start_bash:
 start_ipython:
 	$(COMMAND_START) \
 	   "export MODELICAPATH=/usr/local/JModelica/ThirdParty/MSL:. && \
-            cd /mnt/shared && \
+            cd /home/developer && \
 	    /usr/local/JModelica/bin/jm_ipython.sh"
+      
+start_ipython_windows:
+	$(COMMAND_START_windows) \
+	   "export MODELICAPATH=/usr/local/JModelica/ThirdParty/MSL:. && \
+            cd /home/developer && \
+	    /usr/local/JModelica/bin/jm_ipython.sh"      
 
 clean_output:
 	rm `pwd`/shared/{*.txt,*.fmu}
